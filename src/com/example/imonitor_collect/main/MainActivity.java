@@ -3,7 +3,6 @@ package com.example.imonitor_collect.main;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -14,35 +13,37 @@ import java.util.UUID;
 import android.app.Activity;
 import android.app.Fragment;
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.content.pm.ActivityInfo;
 import android.graphics.ImageFormat;
 import android.hardware.Camera;
 import android.hardware.Camera.Parameters;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.provider.Settings.Secure;
 import android.support.v4.app.ActionBarDrawerToggle;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.telephony.TelephonyManager;
-import android.util.StringBuilderPrinter;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 
 import com.example.imonitor_collect.R;
+import com.example.imonitor_collect.device.CollectingDevice;
+import com.example.imonitor_collect.device.VideoSetting;
 import com.example.imonitor_collect.net.NetStateUtil;
-import com.example.imonitor_collect.net.ReciveCommandThread;
 
 
 public class MainActivity extends Activity {
@@ -132,13 +133,29 @@ public class MainActivity extends Activity {
 	 *
 	 */
 	public static class PlaceholderFragment extends Fragment{
-		private Camera mCamera;
+		private String TAG = "monitor_collection_main";
+		private String side = "COLLECTION";
+		
         private CameraPreview mPreview;
-        private String TAG = "monitor_collection_main";
+        private TextView txtUsername;
+        private TextView txtPassword;
+        private TextView txtCID;
+        private TextView txtAlarm;
+        private TextView txtRecord;
+        private TextView txtDevicename;
+        private TextView txtLinkstate;
+        private TextView txtCodeWay;
+        private Button btnGenerateQR;
+       
+        private Camera mCamera;
+        private SendCommandThread connectThread;
+        
         private String serverUrl = "192.168.1.1";
 		private int serverPort = 6789;
-		private TextView mConnectStateView;
-		private SendCommandThread connectThread;
+		
+		private CollectingDevice device;
+		private VideoSetting videoSetting;
+		
 		public PlaceholderFragment() {
 		}
 
@@ -147,25 +164,66 @@ public class MainActivity extends Activity {
 				Bundle savedInstanceState) {
 			View rootView = inflater.inflate(R.layout.fragment_main, container,
 					false);
+			
+			device = new CollectingDevice();
+			videoSetting = new VideoSetting();
+			loadSetting(device,videoSetting);
+			
 			mCamera = getCameraInstance();
 			initParams(mCamera);
 			FrameLayout preview = (FrameLayout)rootView.findViewById(R.id.monitor_sv1);
 			mPreview = new CameraPreview(this.getActivity(), mCamera);
 			preview.addView(mPreview);
-			mConnectStateView = (TextView)rootView.findViewById(R.id.device_state);
-			runConnectThread();
+			
+			txtUsername = (TextView)rootView.findViewById(R.id.text_username);
+			txtPassword = (TextView)rootView.findViewById(R.id.text_password);
+			txtCID = (TextView)rootView.findViewById(R.id.text_cid);
+			txtDevicename = (TextView)rootView.findViewById(R.id.text_devicename);
+			txtLinkstate = (TextView)rootView.findViewById(R.id.text_linkstate);
+			txtCodeWay = (TextView)rootView.findViewById(R.id.text_codeway);
+			
+			txtUsername.setText(device.getUserName());
+			txtPassword.setText(device.getPassword());
+			
+			txtCID.setText(device.getDeviceId());
+			txtDevicename.setText("设备名："+device.getDeviceName());
+			if(videoSetting.getCodeway() == 0)
+				txtCodeWay.setText("编码方式：软件编码");
+			else
+				txtCodeWay.setText("编码方式：硬件编码");
+			//runConnectThread();
 			
 			
 			return rootView;
 		}
-		
-	    
+		/**
+		 * load devicename,username,password
+		 * and the videosetting from xml
+		 */
+	    public void loadSetting(CollectingDevice device,VideoSetting videoSetting){
+	    	SharedPreferences preParas = PreferenceManager.getDefaultSharedPreferences(this.getActivity());
+	    	
+	    	device.setDeviceName(preParas.getString("Devicename", "android1111"));
+	    	device.setUserName(preParas.getString("Username", "user999"));
+	    	device.setPassword(preParas.getString("Password","123456"));
+	    	device.setDeviceId(getUUID());
+	    	videoSetting.setVideoPreRate(preParas.getInt("VideoPreRate", 1));
+	    	videoSetting.setVideoHeightRatio(preParas.getFloat("VideoHeightRatio", 100));
+	    	videoSetting.setVideoWidthRatio(preParas.getFloat("VideoWidthRatio", 100));
+	    }
+	    /**
+	     * 
+	     */
 		public void runConnectThread() {
 			// TODO Auto-generated method stub
-			String cid = getUUID();
+			
 		    
 			if(new NetStateUtil(this.getActivity()).isNetworkConnected()){
-				connectThread = new SendCommandThread(SendCommandThread.CONNECTING_TO_SERVER.concat(cid), serverUrl, serverPort);	
+				connectThread = new SendCommandThread(side+"##"+SendCommandThread.CONNECTING_TO_SERVER+"##"+
+														device.getDeviceId()+"$"+
+														device.getDeviceName()+"$"+
+														device.getUserName()+"$"+
+														device.getPassword(), serverUrl, serverPort);	
 				//start the thread using handlder, get return value update the stateText;
 				connectHandler.post(connectThread);
 			}
@@ -177,28 +235,33 @@ public class MainActivity extends Activity {
 				super.handleMessage(msg);
 
 				if(msg.arg1 == 1)
-					mConnectStateView.setText("--已连接--");
+					txtLinkstate.setText("--已连接--");
 				else
-					mConnectStateView.setText("--未连接--");
-				//this.postDelayed(connectThread, 2000);
+					txtLinkstate.setText("--未连接--");
+				this.postDelayed(connectThread, 2000);
 		        //this.postAtTime(r, System.currentTimeMillis() + 100000);
 			}
 		};
 		
-		
+		/**
+		 * Thread to connect or disconnect to server
+		 * @author Administrator
+		 *
+		 */
 		class SendCommandThread implements Runnable{
 			private String mCommand;
 			private String mServerUrl;
 			private int mServerPort;
 			/**
-			 * client send these orders to server
+			 * collection client send these orders to server
 			 */
-			public static final String CONNECTING_TO_SERVER = "##collection$connect";
-			public static final String DISCONNECTING = "##collection&disconnect";
+			public static final String CONNECTING_TO_SERVER = "CONNECT";
+			public static final String DISCONNECTING = "DISCONNECT";
+			public static final String MODIFY_INFO = "MODIFY_INFO";
 			/**
 			 * 
-			 * @param commond
-			 * @param serverUrl
+			 * @param command connect or disconnect
+			 * @param serverUrl 
 			 * @param serverPort
 			 */
 			public SendCommandThread(String command,String serverUrl,int serverPort){
@@ -215,10 +278,16 @@ public class MainActivity extends Activity {
 					
 					out.println(mCommand);
 					String result = bReader.readLine();
-					
+					Message msg = connectHandler.obtainMessage();
+					msg.arg1 = Integer.parseInt(result);
+					connectHandler.sendMessage(msg);
 					out.flush();
 					out.close();
 					socket.close();
+					
+					if(msg.arg1 == 1)
+						connectHandler.removeCallbacks(this);
+
 				} catch (UnknownHostException e) {
 				} catch (IOException e) {
 				}  
@@ -283,7 +352,9 @@ public class MainActivity extends Activity {
             param.setPreviewSize(bestSize.width, bestSize.height);
 
             camera.setParameters(param);
-            param.setPreviewFrameRate(5);//设置预览的时候以每秒五帧进行显示...
+            param.setPreviewFrameRate(videoSetting.getVideoPreRate());
+            param.setJpegQuality(videoSetting.getVideoQuality());
+            
 			return param;
         	
         }

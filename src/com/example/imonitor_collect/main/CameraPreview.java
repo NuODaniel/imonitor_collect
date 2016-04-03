@@ -1,8 +1,14 @@
 package com.example.imonitor_collect.main;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
+import com.example.imonitor_collect.device.VideoSetting;
+import com.example.imonitor_collect.net.NetInfo;
+
 import android.content.Context;
+import android.graphics.Rect;
+import android.graphics.YuvImage;
 import android.hardware.Camera;
 import android.hardware.Camera.Parameters;
 import android.util.Log;
@@ -10,12 +16,15 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
 /** A basic Camera preview class */
-public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
+public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback,Camera.PreviewCallback{
 	private String TAG = "CameraPreview";
     private SurfaceHolder mHolder;
     private Camera mCamera;
     private Parameters params;
-
+    private NetInfo netinfo;
+    private VideoSetting videoSetting;
+    private int tempPreFrameNo = 0;
+    
     public CameraPreview(Context context, Camera camera) {
         super(context);
         mCamera = camera;
@@ -77,6 +86,45 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
 		params = mCamera.getParameters();
 		params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);//1连续对焦
 		mCamera.setParameters(params);
-		
 	}
+
+	@Override
+	public void onPreviewFrame(byte[] data, Camera camera) {
+		// TODO Auto-generated method stub
+		if(!netinfo.isStartedSend())
+			return;
+		if(tempPreFrameNo<videoSetting.getVideoPreRate()){
+			tempPreFrameNo++;
+			return;
+		}
+		tempPreFrameNo=0;		
+		try {
+		      if(data!=null)
+		      {
+		        YuvImage image = new YuvImage(data,
+        									videoSetting.getVideoFormatIndex(),
+        									videoSetting.getVideoWidth(),
+        									videoSetting.getVideoHeight(),
+        									null);
+		        if(image!=null)
+		        {
+		        	ByteArrayOutputStream outstream = new ByteArrayOutputStream();
+		      	  	//在此设置图片的尺寸和质量 
+		        	Camera.Size imageSize = mCamera.getParameters().getPreviewSize();
+		      	  	image.compressToJpeg(new Rect(0, 0,
+		      	  			(int)(videoSetting.getVideoWidthRatio()*imageSize.width), 
+		      	  			(int)(videoSetting.getVideoHeightRatio()*imageSize.height)),
+		      	  			videoSetting.getVideoQuality(), outstream);  
+		      	  	outstream.flush();
+		      	  	//启用线程将图像数据发送出去
+		      	  	//Thread th =ort) new MySendFileThread(outstream,pUsername,serverUrl,serverP;
+		      	  	//th.start();  
+		      	  	
+		        }
+		      }
+		  } catch (IOException e) {
+		      e.printStackTrace();
+		  }
+	}
+   
 }

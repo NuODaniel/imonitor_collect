@@ -1,8 +1,15 @@
 package com.example.imonitor_collect.net;
 
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.util.Enumeration;
+
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
+import android.util.Log;
 
 public class NetStateUtil {
 	private Context context;
@@ -48,5 +55,52 @@ public class NetStateUtil {
             netType = NETTYPE_WIFI;
         }
         return netType;
+    }
+    /** 
+     * 将ip的整数形式转换成ip形式 
+     *  
+     * @param ipInt 
+     * @return 
+     */  
+    public static String int2ip(int ipInt) {  
+        StringBuilder sb = new StringBuilder();  
+        sb.append(ipInt & 0xFF).append(".");  
+        sb.append((ipInt >> 8) & 0xFF).append(".");  
+        sb.append((ipInt >> 16) & 0xFF).append(".");  
+        sb.append((ipInt >> 24) & 0xFF);  
+        return sb.toString();  
+    }  
+    public static String getLocalIpAddress(Context context,int netType) {  
+        try {  
+            switch (netType) {
+			case NETTYPE_WIFI:;
+				WifiManager wifiManager = (WifiManager) context  
+	                    .getSystemService(Context.WIFI_SERVICE);  
+	            WifiInfo wifiInfo = wifiManager.getConnectionInfo();  
+	            int i = wifiInfo.getIpAddress();  
+	            return int2ip(i);  
+				
+			case NETTYPE_CMWAP: 
+			case NETTYPE_CMNET: 
+	            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();)  
+	            {  
+	               NetworkInterface intf = en.nextElement();  
+	               for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();)  
+	               {  
+	                   InetAddress inetAddress = enumIpAddr.nextElement();  
+	                   if (!inetAddress.isLoopbackAddress())  
+	                   {  
+	                       return inetAddress.getHostAddress().toString();  
+	                   }  
+	               }  
+	           } 
+				break;
+			default:
+				break;
+			}
+        } catch (Exception ex) {  
+            Log.d("NetUtil", ex.getMessage());  
+        }
+		return null;  
     }
 }
