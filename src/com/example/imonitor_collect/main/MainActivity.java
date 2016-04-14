@@ -1,11 +1,5 @@
 package com.example.imonitor_collect.main;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
@@ -13,6 +7,7 @@ import java.util.UUID;
 import android.app.Activity;
 import android.app.Fragment;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.content.pm.ActivityInfo;
@@ -31,6 +26,7 @@ import android.support.v4.widget.DrawerLayout;
 import android.telephony.TelephonyManager;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
@@ -41,9 +37,14 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import com.example.imonitor_collect.R;
-import com.example.imonitor_collect.device.CollectingDevice;
+import com.example.imonitor_collect.device.CollectionDevice;
 import com.example.imonitor_collect.device.VideoSetting;
+import com.example.imonitor_collect.dialog.QRCodeDialog;
 import com.example.imonitor_collect.net.NetStateUtil;
+import com.example.imonitor_collect.net.NetThread;
+import com.example.imonitor_collect.net.thread.ConnectThread;
+import com.example.imonitor_collect.net.thread.RegisterThread;
+import com.example.imonitor_collect.util.QRCodeUtil;
 
 
 public class MainActivity extends Activity {
@@ -148,14 +149,16 @@ public class MainActivity extends Activity {
         private Button btnGenerateQR;
        
         private Camera mCamera;
-        private SendCommandThread connectThread;
+        private ConnectThread connectThread;
+        private RegisterThread registerThread;
         
-        private String serverUrl = "192.168.1.1";
+        private String serverUrl = "192.168.253.1";
 		private int serverPort = 6789;
 		
-		private CollectingDevice device;
+		private CollectionDevice device;
 		private VideoSetting videoSetting;
-		
+		private NetStateUtil netUtil;
+		private SharedPreferences preParas = null;
 		public PlaceholderFragment() {
 		}
 
@@ -165,12 +168,17 @@ public class MainActivity extends Activity {
 			View rootView = inflater.inflate(R.layout.fragment_main, container,
 					false);
 			
-			device = new CollectingDevice();
+			device = new CollectionDevice();
 			videoSetting = new VideoSetting();
+			netUtil = new NetStateUtil(this.getActivity());
+			boolean first = justifyFirstRun();
 			loadSetting(device,videoSetting);
+			if(first)registerDevice();
+			
 			
 			mCamera = getCameraInstance();
 			initParams(mCamera);
+			
 			FrameLayout preview = (FrameLayout)rootView.findViewById(R.id.monitor_sv1);
 			mPreview = new CameraPreview(this.getActivity(), mCamera);
 			preview.addView(mPreview);
@@ -181,118 +189,161 @@ public class MainActivity extends Activity {
 			txtDevicename = (TextView)rootView.findViewById(R.id.text_devicename);
 			txtLinkstate = (TextView)rootView.findViewById(R.id.text_linkstate);
 			txtCodeWay = (TextView)rootView.findViewById(R.id.text_codeway);
-			
+			btnGenerateQR = (Button)rootView.findViewById(R.id.btn_generateQRcode);
+			btnGenerateQR.setOnClickListener(new OnClickListener() {
+				@Override
+				public void onClick(View v) {
+					String cid = device.getCid();
+					String username = device.getUserName();
+					String password = device.getPassword();
+					
+					if(cid!=null && username!=null && password != null){
+						
+						QRCodeUtil qrcGenerator = new QRCodeUtil(getActivity());
+						qrcGenerator.createQRImage(cid+"\n"+username+"\n"+password);
+						
+						QRCodeDialog.Builder builder = new QRCodeDialog.Builder(v.getContext());
+						builder.setQrCode(qrcGenerator.getSweepIV());
+						
+						builder.setPositiveButton("Á°ÆÂÆö", new DialogInterface.OnClickListener() {
+							public void onClick(DialogInterface dialog, int which) {
+								dialog.dismiss();
+								//ËÆæÁΩÆ‰Ω†ÁöÑÊìç‰Ωú‰∫ãÈ°π
+							}
+						});
+
+						builder.setNegativeButton("ÂèñÊ∂à",
+								new android.content.DialogInterface.OnClickListener() {
+									public void onClick(DialogInterface dialog, int which) {
+										dialog.dismiss();
+									}
+								});
+
+						builder.create().show();
+					}
+					
+				}
+			});
 			txtUsername.setText(device.getUserName());
 			txtPassword.setText(device.getPassword());
-			
-			txtCID.setText(device.getDeviceId());
-			txtDevicename.setText("…Ë±∏√˚£∫"+device.getDeviceName());
+			txtCID.setText(device.getCid());
+			txtDevicename.setText("ËÆæÂ§áÂêçÔºö"+device.getDeviceName());
 			if(videoSetting.getCodeway() == 0)
-				txtCodeWay.setText("±‡¬Î∑Ω Ω£∫»Ìº˛±‡¬Î");
+				txtCodeWay.setText("ËΩØ‰ª∂ÁºñÁ†Å");
 			else
-				txtCodeWay.setText("±‡¬Î∑Ω Ω£∫”≤º˛±‡¬Î");
-			//runConnectThread();
+				txtCodeWay.setText("Á°¨‰ª∂ÁºñÁ†Å");
 			
+			
+			
+			runConnectThread();
 			
 			return rootView;
 		}
 		/**
-		 * load devicename,username,password
+		 * load cid,devicename,username,password
 		 * and the videosetting from xml
 		 */
-	    public void loadSetting(CollectingDevice device,VideoSetting videoSetting){
-	    	SharedPreferences preParas = PreferenceManager.getDefaultSharedPreferences(this.getActivity());
-	    	
-	    	device.setDeviceName(preParas.getString("Devicename", "android1111"));
-	    	device.setUserName(preParas.getString("Username", "user999"));
-	    	device.setPassword(preParas.getString("Password","123456"));
-	    	device.setDeviceId(getUUID());
-	    	videoSetting.setVideoPreRate(preParas.getInt("VideoPreRate", 1));
-	    	videoSetting.setVideoHeightRatio(preParas.getFloat("VideoHeightRatio", 100));
-	    	videoSetting.setVideoWidthRatio(preParas.getFloat("VideoWidthRatio", 100));
+	    public void loadSetting(CollectionDevice device,VideoSetting videoSetting){
+	    	preParas = PreferenceManager.getDefaultSharedPreferences(this.getActivity());//setting
+	    	SharedPreferences preferences = this.getActivity().getSharedPreferences("reg", Context.MODE_PRIVATE);//cid  
+	    	if(preParas != null){
+		    	device.setDeviceName(preParas.getString("Devicename", "android1111"));
+		    	device.setUserName(preParas.getString("Username", "user999"));
+		    	device.setPassword(preParas.getString("Password","123456"));
+		    	device.setCid(preferences.getString("Cid", "no registered cid"));
+		    	
+		    	videoSetting.setVideoPreRate(preParas.getInt("VideoPreRate", 10));
+		    	videoSetting.setVideoHeightRatio(preParas.getFloat("VideoHeightRatio", 100));
+		    	videoSetting.setVideoWidthRatio(preParas.getFloat("VideoWidthRatio", 100));
+		    	videoSetting.setCodeway(preParas.getInt("Codeway", 0));
+		    	
+		    	Editor editor = preParas.edit();
+		    	editor.putString("Devicename", device.getDeviceName());
+		    	editor.putString("Username", device.getUserName());
+		    	editor.putString("Password", device.getPassword());
+		    	editor.putInt("VideoPreRate", videoSetting.getVideoPreRate());
+		    	editor.putFloat("VideoHeightRatio", videoSetting.getVideoHeightRatio());
+		    	editor.putFloat("VideoWidthRatio", videoSetting.getVideoWidthRatio());
+		    	editor.putInt("Codeway", videoSetting.getCodeway());
+		    	editor.commit();
+		    	
+	    	}
 	    }
+	    public boolean justifyFirstRun(){
+		   SharedPreferences preferences = this.getActivity().getSharedPreferences("reg", Context.MODE_PRIVATE);  
+		    if (preferences.getBoolean("firststart", true)) { 
+		    	Editor editor = preferences.edit();  
+				editor.putBoolean("firststart", false);  
+		    	editor.putString("Cid", getUUID());
+		    	
+		    	editor.commit();
+		    	return true;
+		    }
+        	return false;
+        }
+	    public void registerDevice(){
+	    	if(netUtil.isNetworkConnected()){
+	    		registerThread = new RegisterThread(side+"##"+NetThread.REGISTER_COLLECTION+"##"+
+	    												device.getCid()+"$"+
+	    												device.getUserName()+"$"+
+	    												device.getPassword()+"$"+
+	    												device.getDeviceName(), serverUrl, serverPort,
+	    												registerHandler);
+	    		//registerHandler.post(registerThread);
+	    		
+	    		new Thread(registerThread).start();
+	    	}
+	    }
+	    public void setRegisterState(boolean state){
+			 SharedPreferences preferences = this.getActivity().getSharedPreferences("reg", Context.MODE_PRIVATE);  
+		    	Editor editor = preferences.edit();  
+				editor.putBoolean("firststart", state);
+				editor.commit();
+			}
+	    Handler registerHandler = new Handler(){
+			@Override
+			public void handleMessage(Message msg){
+				super.handleMessage(msg);
+				if(msg.arg1 == 1)
+					setRegisterState(false);
+				else
+					setRegisterState(true);
+			}
+	    };
+	    
 	    /**
 	     * 
 	     */
 		public void runConnectThread() {
-			// TODO Auto-generated method stub
-			
-		    
-			if(new NetStateUtil(this.getActivity()).isNetworkConnected()){
-				connectThread = new SendCommandThread(side+"##"+SendCommandThread.CONNECTING_TO_SERVER+"##"+
-														device.getDeviceId()+"$"+
+			if(netUtil.isNetworkConnected()){
+				connectThread = new ConnectThread(side+"##"+NetThread.CONNECTING_TO_SERVER+"##"+
+														device.getCid()+"$"+
 														device.getDeviceName()+"$"+
 														device.getUserName()+"$"+
-														device.getPassword(), serverUrl, serverPort);	
+														device.getPassword(), serverUrl, serverPort,
+														connectHandler);	
 				//start the thread using handlder, get return value update the stateText;
-				connectHandler.post(connectThread);
+				new Thread(connectThread).start();;
 			}
 			
 		}
+		
+		
 		Handler connectHandler = new Handler(){
 			@Override
 			public void handleMessage(Message msg) {
 				super.handleMessage(msg);
 
 				if(msg.arg1 == 1)
-					txtLinkstate.setText("--“—¡¨Ω”--");
-				else
-					txtLinkstate.setText("--Œ¥¡¨Ω”--");
+					txtLinkstate.setText("--Â∑≤ËøûÊé•--");
+				else if(msg.arg1 == 0)
+					txtLinkstate.setText("--Êú™ËøûÊé•--");
 				this.postDelayed(connectThread, 2000);
-		        //this.postAtTime(r, System.currentTimeMillis() + 100000);
+
 			}
 		};
 		
-		/**
-		 * Thread to connect or disconnect to server
-		 * @author Administrator
-		 *
-		 */
-		class SendCommandThread implements Runnable{
-			private String mCommand;
-			private String mServerUrl;
-			private int mServerPort;
-			/**
-			 * collection client send these orders to server
-			 */
-			public static final String CONNECTING_TO_SERVER = "CONNECT";
-			public static final String DISCONNECTING = "DISCONNECT";
-			public static final String MODIFY_INFO = "MODIFY_INFO";
-			/**
-			 * 
-			 * @param command connect or disconnect
-			 * @param serverUrl 
-			 * @param serverPort
-			 */
-			public SendCommandThread(String command,String serverUrl,int serverPort){
-				this.mCommand = command;
-				this.mServerPort = serverPort;
-				this.mServerUrl = serverUrl;
-			}
-			public void run(){
-				// µ¿˝ªØSocket  
-		        try {
-					Socket socket=new Socket(mServerUrl,mServerPort);
-					PrintWriter out = new PrintWriter(socket.getOutputStream());
-					BufferedReader bReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-					
-					out.println(mCommand);
-					String result = bReader.readLine();
-					Message msg = connectHandler.obtainMessage();
-					msg.arg1 = Integer.parseInt(result);
-					connectHandler.sendMessage(msg);
-					out.flush();
-					out.close();
-					socket.close();
-					
-					if(msg.arg1 == 1)
-						connectHandler.removeCallbacks(this);
-
-				} catch (UnknownHostException e) {
-				} catch (IOException e) {
-				}  
-			}
-		}
+		
 		
 		@Override
 		public void onResume() {
@@ -326,9 +377,13 @@ public class MainActivity extends Activity {
 		    }
 		    return c; // returns null if camera is unavailable
 		}
-		
+		/**
+		 * initilize camera params
+		 * @param camera
+		 * @return
+		 */
 		private Parameters initParams(Camera camera){
-        	Parameters param=camera.getParameters();//ªÒ»°≤Œ ˝
+        	Parameters param=camera.getParameters();//ÔøΩÔøΩ»°ÔøΩÔøΩÔøΩÔøΩ
             //get the best size of pictures
         	//if not there will be dull color photos taken.
         	//call getSupportedPreviewSizes()to get the support size list ,and get the biggest one

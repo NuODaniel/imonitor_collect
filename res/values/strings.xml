@@ -4,6 +4,9 @@
     <string name="app_name">imonitor_collect</string>
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
+    <string name="qrcode_dialog_ok">OK</string>
+    <string name="qrcode_dialog_cancel">Cancel</string>
+    <string name="qrcode_dialog_title">QRCode</string>
 	<string-array name="planets_array">
 	        <item>Mercury</item>
 	        <item>Venus</item>
@@ -14,4 +17,8 @@
 	        <item>Uranus</item>
 	        <item>Neptune</item>
 	    </string-array>
+	    
+	
+	
+	
 </resources>

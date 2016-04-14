@@ -1,14 +1,14 @@
 package com.example.imonitor_collect.device;
 
 public class VideoSetting {
-	private int VideoPreRate;//Ö¡ÂÊ
-	private int VideoQuality=85;//ÊÓÆµÖÊÁ¿
-    private float VideoWidthRatio=1;//·¢ËÍÊÓÆµ¿í¶È±ÈÀı
-    private float VideoHeightRatio=1;//·¢ËÍÊÓÆµ¸ß¶È±ÈÀı
-    private int VideoFormatIndex=0;//ÊÓÆµ¸ñÊ½Ë÷Òı
-    private int VideoWidth=320;//·¢ËÍÊÓÆµ¿í¶È
-    private int VideoHeight=240;//·¢ËÍÊÓÆµ¸ß¶È
-    private int Codeway=1;//1Ó²¼ş0Èí¼ş
+	private int VideoPreRate;//å¸§ç‡
+	private int VideoQuality=85;//è§†é¢‘è´¨é‡
+    private float VideoWidthRatio=1;//å‘é€è§†é¢‘å®½åº¦æ¯”ä¾‹
+    private float VideoHeightRatio=1;//å‘é€è§†é¢‘é«˜åº¦æ¯”ä¾‹
+    private int VideoFormatIndex=0;//è§†é¢‘æ ¼å¼ç´¢å¼•
+    private int VideoWidth=320;//å‘é€è§†é¢‘å®½åº¦
+    private int VideoHeight=240;//å‘é€è§†é¢‘é«˜åº¦
+    private int Codeway=1;//1ç¡¬ä»¶0è½¯ä»¶
     
 	public int getVideoPreRate() {
 		return VideoPreRate;
