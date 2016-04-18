@@ -5,9 +5,11 @@ import java.util.List;
 import java.util.UUID;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Fragment;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.content.pm.ActivityInfo;
@@ -17,6 +19,7 @@ import android.hardware.Camera.Parameters;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.os.Messenger;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.provider.Settings.Secure;
@@ -24,6 +27,7 @@ import android.support.v4.app.ActionBarDrawerToggle;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.telephony.TelephonyManager;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -40,78 +44,101 @@ import com.example.imonitor_collect.R;
 import com.example.imonitor_collect.device.CollectionDevice;
 import com.example.imonitor_collect.device.VideoSetting;
 import com.example.imonitor_collect.dialog.QRCodeDialog;
-import com.example.imonitor_collect.net.NetStateUtil;
 import com.example.imonitor_collect.net.NetThread;
 import com.example.imonitor_collect.net.thread.ConnectThread;
+import com.example.imonitor_collect.net.thread.DisconnectThread;
 import com.example.imonitor_collect.net.thread.RegisterThread;
+import com.example.imonitor_collect.service.CheckNetStateService;
+import com.example.imonitor_collect.service.RetrieveCommandService;
+import com.example.imonitor_collect.util.NetStateUtil;
 import com.example.imonitor_collect.util.QRCodeUtil;
 
 
 public class MainActivity extends Activity {
-    private String[] mPlanetTitles;
+    private String[] mMenuTitles;
     private DrawerLayout mDrawerLayout;
     private ActionBarDrawerToggle mDrawerToggle;
     private ListView mDrawerList;
-    
+    private PlaceholderFragment placeFragment ;
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
-		
-		
 		super.onCreate(savedInstanceState);
-		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+		
+		//setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 		
 		setContentView(R.layout.activity_main);
 		
-		 mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
-
-	        // init the ListView and Adapter, nothing new
-	        initListView();
-
-	        // set a custom shadow that overlays the main content when the drawer
-	        // opens
-	        mDrawerLayout.setDrawerShadow(R.drawable.drawer_shadow,
+		mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
+        // init the ListView and Adapter, nothing new
+        initListView();
+        mDrawerLayout.setDrawerShadow(R.drawable.drawer_shadow,
 	                GravityCompat.START);
-
-//	        mDrawerToggle = new ActionBarDrawerToggle(this, mDrawerLayout,
-//	                R.drawable.ic_drawer, R.string.drawer_open,
-//	                R.string.drawer_close)
-//	        {
-//
-//	            /** Called when a drawer has settled in a completely closed state. */
-//	            public void onDrawerClosed(View view)
-//	            {
-//
-//	                invalidateOptionsMenu(); // creates call to
-//	                                            // onPrepareOptionsMenu()
-//	            }
-//
-//	            /** Called when a drawer has settled in a completely open state. */
-//	            public void onDrawerOpened(View drawerView)
-//	            {
-//
-//	                invalidateOptionsMenu(); // creates call to
-//	                                            // onPrepareOptionsMenu()
-//	            }
-//	        };
-//
-//	        // Set the drawer toggle as the DrawerListener
-//	        mDrawerLayout.setDrawerListener(mDrawerToggle);
 	        
 		if (savedInstanceState == null) {
+			if(placeFragment==null)
+				placeFragment = new PlaceholderFragment();
 			getFragmentManager().beginTransaction()
-					.add(R.id.fragment_content, new PlaceholderFragment()).commit();
+					.add(R.id.fragment_content, placeFragment).commit();
 		}
 		
 	}
+    @SuppressWarnings("deprecation")
+	@Override  
+    public boolean onKeyDown(int keyCode, KeyEvent event)  
+    {  
+        if (keyCode == KeyEvent.KEYCODE_BACK )  
+        {  
+            // 创建退出对话框  
+            AlertDialog isExit = new AlertDialog.Builder(this).create();  
+            // 设置对话框标题  
+            isExit.setTitle("系统提示");  
+            // 设置对话框消息  
+            isExit.setMessage("确定要退出吗");  
+            // 添加选择按钮并注册监听  
+            isExit.setButton("确定", new  DialogInterface.OnClickListener(){
+
+				@Override
+				public void onClick(DialogInterface dialog, int which) {
+					// TODO Auto-generated method stub
+					 switch (which)  
+			            {  
+			            case AlertDialog.BUTTON_POSITIVE:// "确认"按钮退出程序
+			            	new Thread(new DisconnectThread(MainActivity.this)).start();
+			                finish();  
+			                break;  
+			            case AlertDialog.BUTTON_NEGATIVE:// "取消"第二个按钮取消对话框  
+			                break;  
+			            default:  
+			                break;  
+			            }  
+				}
+            	
+            });  
+            isExit.setButton2("取消", new DialogInterface.OnClickListener() {
+				
+				@Override
+				public void onClick(DialogInterface dialog, int which) {
+					// TODO Auto-generated method stub
+					
+				}
+			});  
+            // 显示对话框  
+            isExit.show();  
+  
+        }  
+          
+        return false;  
+          
+    }  
 	private void initListView()
     {
         mDrawerList = (ListView) findViewById(R.id.left_drawer);
 
-        mPlanetTitles = getResources().getStringArray(R.array.planets_array);
+        mMenuTitles = getResources().getStringArray(R.array.planets_array);
 
         // Set the adapter for the list view
         mDrawerList.setAdapter(new ArrayAdapter<String>(this,
-                R.layout.drawer_list_item, mPlanetTitles));
+                R.layout.drawer_list_item, mMenuTitles));
         // Set the list's click listener
         mDrawerList.setOnItemClickListener(new OnItemClickListener()
         {
@@ -123,7 +150,6 @@ public class MainActivity extends Activity {
                 // Highlight the selected item, update the title, and close the
                 // drawer
                 mDrawerList.setItemChecked(position, true);
-                setTitle(mPlanetTitles[position]);
                 mDrawerLayout.closeDrawer(mDrawerList);
             }
         });
@@ -137,6 +163,7 @@ public class MainActivity extends Activity {
 		private String TAG = "monitor_collection_main";
 		private String side = "COLLECTION";
 		
+		private View rootView = null;
         private CameraPreview mPreview;
         private TextView txtUsername;
         private TextView txtPassword;
@@ -149,7 +176,6 @@ public class MainActivity extends Activity {
         private Button btnGenerateQR;
        
         private Camera mCamera;
-        private ConnectThread connectThread;
         private RegisterThread registerThread;
         
         private String serverUrl = "192.168.253.1";
@@ -159,28 +185,43 @@ public class MainActivity extends Activity {
 		private VideoSetting videoSetting;
 		private NetStateUtil netUtil;
 		private SharedPreferences preParas = null;
+
+		private static Intent connectIntent = null;
+		private static int connectServiceState = 0;//0 closed 1 started
 		public PlaceholderFragment() {
 		}
 
 		@Override
 		public View onCreateView(LayoutInflater inflater, ViewGroup container,
 				Bundle savedInstanceState) {
-			View rootView = inflater.inflate(R.layout.fragment_main, container,
-					false);
+	        if (null != rootView) {
+	            ViewGroup parent = (ViewGroup) rootView.getParent();
+	            if (null != parent) {
+	                parent.removeView(rootView);
+	            }
+	        } else {
+	            rootView = inflater.inflate(R.layout.fragment_main, container, false);
+	            initView(rootView);// 控件初始化
+	        }
 			
+			
+			return rootView;
+		}
+		
+		private void initView(View rv) {
 			device = new CollectionDevice();
 			videoSetting = new VideoSetting();
 			netUtil = new NetStateUtil(this.getActivity());
 			boolean first = justifyFirstRun();
 			loadSetting(device,videoSetting);
-			if(first)registerDevice();
-			
+			if(first)
+				registerDevice();
 			
 			mCamera = getCameraInstance();
 			initParams(mCamera);
 			
 			FrameLayout preview = (FrameLayout)rootView.findViewById(R.id.monitor_sv1);
-			mPreview = new CameraPreview(this.getActivity(), mCamera);
+			mPreview = new CameraPreview(this.getActivity(), videoSetting, mCamera);
 			preview.addView(mPreview);
 			
 			txtUsername = (TextView)rootView.findViewById(R.id.text_username);
@@ -233,12 +274,10 @@ public class MainActivity extends Activity {
 			else
 				txtCodeWay.setText("硬件编码");
 			
-			
-			
-			runConnectThread();
-			
-			return rootView;
+			runConnectService();
 		}
+		
+
 		/**
 		 * load cid,devicename,username,password
 		 * and the videosetting from xml
@@ -266,20 +305,23 @@ public class MainActivity extends Activity {
 		    	editor.putFloat("VideoWidthRatio", videoSetting.getVideoWidthRatio());
 		    	editor.putInt("Codeway", videoSetting.getCodeway());
 		    	editor.commit();
-		    	
-	    	}
+		    }
 	    }
 	    public boolean justifyFirstRun(){
 		   SharedPreferences preferences = this.getActivity().getSharedPreferences("reg", Context.MODE_PRIVATE);  
-		    if (preferences.getBoolean("firststart", true)) { 
+		   preParas = PreferenceManager.getDefaultSharedPreferences(this.getActivity());//setting
+		   if (preferences.getBoolean("firststart", true)) { 
 		    	Editor editor = preferences.edit();  
 				editor.putBoolean("firststart", false);  
-		    	editor.putString("Cid", getUUID());
-		    	
 		    	editor.commit();
+		    	
+		    	Editor editor2 = preParas.edit();
+		    	editor2.putString("Cid",getUUID());
+		    	editor2.commit();
+		    	
 		    	return true;
-		    }
-        	return false;
+		    }else
+		    	return false;
         }
 	    public void registerDevice(){
 	    	if(netUtil.isNetworkConnected()){
@@ -312,23 +354,23 @@ public class MainActivity extends Activity {
 	    };
 	    
 	    /**
-	     * 
+	     * run connectService
 	     */
-		public void runConnectThread() {
-			if(netUtil.isNetworkConnected()){
-				connectThread = new ConnectThread(side+"##"+NetThread.CONNECTING_TO_SERVER+"##"+
-														device.getCid()+"$"+
-														device.getDeviceName()+"$"+
-														device.getUserName()+"$"+
-														device.getPassword(), serverUrl, serverPort,
-														connectHandler);	
-				//start the thread using handlder, get return value update the stateText;
-				new Thread(connectThread).start();;
+		public void runConnectService() {
+			if(connectIntent==null){
+				connectIntent = new Intent();
+				connectIntent.setClass(getActivity(), CheckNetStateService.class);
+				connectIntent.putExtra("MainActivity", new Messenger(connectHandler));
+				connectIntent.putExtra("cid", device.getCid());
+				connectIntent.putExtra("devicename", device.getDeviceName());
+				connectIntent.putExtra("username", device.getUserName());
+				connectIntent.putExtra("password", device.getPassword());
 			}
-			
+			if(connectServiceState == 0){
+				this.getActivity().startService(connectIntent); 
+				connectServiceState = 1;
+			}
 		}
-		
-		
 		Handler connectHandler = new Handler(){
 			@Override
 			public void handleMessage(Message msg) {
@@ -338,19 +380,15 @@ public class MainActivity extends Activity {
 					txtLinkstate.setText("--已连接--");
 				else if(msg.arg1 == 0)
 					txtLinkstate.setText("--未连接--");
-				this.postDelayed(connectThread, 2000);
-
 			}
 		};
-		
-		
-		
 		@Override
 		public void onResume() {
 			// TODO Auto-generated method stub
 			super.onResume();
-			//cameraId = 0;// default id
-			//OpenCameraAndSetSurfaceviewSize(0);
+			mCamera = getCameraInstance();
+			initParams(mCamera);
+			mPreview.reset(mCamera);
 		}
 
 		@Override
@@ -364,13 +402,15 @@ public class MainActivity extends Activity {
 		public void onDestroy() {
 			// TODO Auto-generated method stub
 			super.onDestroy();
+			this.getActivity().stopService(connectIntent);
+			connectServiceState = 0;
 			kill_camera();
 		}
 
 		public static Camera getCameraInstance(){
 		    Camera c = null;
 		    try {
-		            c = Camera.open(0); // attempt to get a Camera instance
+		        c = Camera.open(0); // attempt to get a Camera instance
 		    }
 		    catch (Exception e){
 		        // Camera is not available (in use or does not exist)
@@ -411,7 +451,6 @@ public class MainActivity extends Activity {
             param.setJpegQuality(videoSetting.getVideoQuality());
             
 			return param;
-        	
         }
 		/**
 		 * get the android device UUID
@@ -428,16 +467,13 @@ public class MainActivity extends Activity {
 			
 			return deviceUuid.toString();
 		}
-		
-		
 		private void kill_camera() {
 			if (mCamera != null) {
+				mCamera.setPreviewCallback(null);
 				mCamera.stopPreview();
 				mCamera.release();
 				mCamera = null;
 			}
 		}
-		
-		
 	}
 }

@@ -4,18 +4,32 @@ public abstract class NetThread implements Runnable{
 	/*
 	 * collection client send these orders to server
 	 */
-	public static final String REGISTER_COLLECTION = "REGISTER";
-	public static final String CONNECTING_TO_SERVER = "CONNECT";
-	public static final String DISCONNECTING = "DISCONNECT";
-	public static final String MODIFY_INFO = "MODIFY_INFO";
+	public static final int REGISTER_COLLECTION = 100001;
+	public static final int CONNECTING_TO_SERVER = 100002;
+	public static final int DISCONNECTING = 100003;
+	public static final int MODIFY_INFO = 100004;
+	public static final int START_TRANSFORM_VIDEO = 100009;
+	public static final int TRANSFROM_DATA = 100010;
 	
+	public static final String side = "COLLECITON";
 	protected String message;
-	protected String mServerUrl;
-	protected int mServerPort;
+	protected String mServerUrl = "192.168.253.1";
+	protected int mServerPort = 6789;
 	public NetThread(String msg, String serverUrl, int serverPort) {
 		message = msg;
 		mServerUrl = serverUrl;
 		mServerPort = serverPort;
 	}
-	
+	public NetThread(String serverUrl, int serverPort) {
+		mServerUrl = serverUrl;
+		mServerPort = serverPort;
+	}
+	public NetThread() {
+	}
+	public String getMessage() {
+		return message;
+	}
+	public void setMessage(String message) {
+		this.message = message;
+	}
 }

@@ -21,7 +21,7 @@ public class RegisterThread extends NetThread{
 	
 	@Override
 	public void run(){
-		//ÊµÀý»¯Socket  
+		//Êµï¿½ï¿½ï¿½ï¿½Socket  
         try {
 			Socket socket=new Socket(mServerUrl,mServerPort);
 			PrintWriter out = new PrintWriter(socket.getOutputStream());
@@ -35,7 +35,7 @@ public class RegisterThread extends NetThread{
 			if(tempmsg!=null){
 				String[] fromServerMessage = tempmsg.split("##");
 				if(fromServerMessage[0].equals("SERVER")){
-					if(fromServerMessage[1].equals(REGISTER_COLLECTION)){
+					if(Integer.parseInt(fromServerMessage[1])==REGISTER_COLLECTION){
 						if(fromServerMessage[2].equals("SUCCESS"))
 							result = 1;
 					}

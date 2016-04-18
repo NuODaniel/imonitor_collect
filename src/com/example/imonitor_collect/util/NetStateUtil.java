@@ -1,4 +1,4 @@
-package com.example.imonitor_collect.net;
+package com.example.imonitor_collect.util;
 
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -14,21 +14,27 @@ import android.util.Log;
 public class NetStateUtil {
 	private Context context;
 	/**
-     * ¼ì²âÍøÂçÊÇ·ñ¿ÉÓÃ
+     * ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½
      * @return
      */
 	public NetStateUtil(Context context){
 		this.context = context;
 	}
-    public boolean isNetworkConnected() {
-        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo ni = cm.getActiveNetworkInfo();
-        return ni != null && ni.isConnectedOrConnecting();
-    }
 
+    public boolean isNetworkConnected() { 
+    	if (context != null) { 
+    	ConnectivityManager mConnectivityManager = (ConnectivityManager) context 
+    	.getSystemService(Context.CONNECTIVITY_SERVICE); 
+    	NetworkInfo mNetworkInfo = mConnectivityManager.getActiveNetworkInfo(); 
+    	if (mNetworkInfo != null) { 
+    	return mNetworkInfo.isAvailable(); 
+    	} 
+    	} 
+    	return false; 
+    	}
     /**
-     * »ñÈ¡µ±Ç°ÍøÂçÀàÐÍ
-     * @return 0£ºÃ»ÓÐÍøÂç   1£ºWIFIÍøÂç   2£ºWAPÍøÂç    3£ºNETÍøÂç
+     * ï¿½ï¿½È¡ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+     * @return 0ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½   1ï¿½ï¿½WIFIï¿½ï¿½ï¿½ï¿½   2ï¿½ï¿½WAPï¿½ï¿½ï¿½ï¿½    3ï¿½ï¿½NETï¿½ï¿½ï¿½ï¿½
      */
     
     public static final int NETTYPE_WIFI = 0x01;
@@ -57,7 +63,7 @@ public class NetStateUtil {
         return netType;
     }
     /** 
-     * ½«ipµÄÕûÊýÐÎÊ½×ª»»³ÉipÐÎÊ½ 
+     * ï¿½ï¿½ipï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê½×ªï¿½ï¿½ï¿½ï¿½ipï¿½ï¿½Ê½ 
      *  
      * @param ipInt 
      * @return 

@@ -9,6 +9,8 @@ import java.net.UnknownHostException;
 
 import android.os.Handler;
 import android.os.Message;
+import android.os.Messenger;
+import android.os.RemoteException;
 
 import com.example.imonitor_collect.net.NetThread;
 
@@ -18,42 +20,54 @@ import com.example.imonitor_collect.net.NetThread;
  *
  */
 public class ConnectThread extends NetThread {
-	Handler connectHandler;
-	public ConnectThread(String msg,String serverUrl,int serverPort, Handler handler){
+	Messenger connectMessenger;
+	public ConnectThread(String msg,String serverUrl,int serverPort, Messenger messenger){
 		super(msg, serverUrl, serverPort);
-		connectHandler = handler;
+		connectMessenger = messenger;
 	}
 	public void run(){
-		//ÊµÀý»¯Socket  
+		int result = 0;
+		Message msg = Message.obtain();
+		
+		//Êµï¿½ï¿½ï¿½ï¿½Socket  
         try {
 			Socket socket=new Socket(mServerUrl,mServerPort);
 			PrintWriter out = new PrintWriter(socket.getOutputStream());
 			BufferedReader bReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			
 			out.println(message);
+			out.flush();
 			String tempmsg = bReader.readLine();
-			int result = 0;
+			result = 0;
 			if(tempmsg!=null){
 				String[] fromServerMessage = tempmsg.split("##");
-				if(fromServerMessage[0].equals("SERVER")){
-					if(fromServerMessage[1].equals(CONNECTING_TO_SERVER)){
+				if(fromServerMessage[0].equals("COLLECTION")){
+					if(Integer.parseInt(fromServerMessage[1])==CONNECTING_TO_SERVER){
 						if(fromServerMessage[2].equals("SUCCESS"))
 							result = 1;
+						else
+							result = 0;
 					}
 				}
 			}
-			Message msg = connectHandler.obtainMessage();
-			msg.arg1 = result;
-			connectHandler.sendMessage(msg);
-			out.flush();
+			
 			out.close();
 			socket.close();
 			
-			if(msg.arg1 == 1)
-				connectHandler.removeCallbacks(this);
-
+			
 		} catch (UnknownHostException e) {
+			result = 0;
 		} catch (IOException e) {
-		}  
+			result = 0;
+		}
+        finally{
+        	msg.arg1 = result;
+			try {
+				connectMessenger.send(msg);
+			} catch (RemoteException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+        }
 	}
 }

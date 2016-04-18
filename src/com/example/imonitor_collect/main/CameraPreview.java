@@ -1,19 +1,21 @@
 package com.example.imonitor_collect.main;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
-import com.example.imonitor_collect.device.VideoSetting;
-import com.example.imonitor_collect.net.NetInfo;
-
 import android.content.Context;
-import android.graphics.Rect;
-import android.graphics.YuvImage;
+import android.content.Intent;
 import android.hardware.Camera;
 import android.hardware.Camera.Parameters;
+import android.os.Handler;
+import android.os.Messenger;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.widget.Toast;
+
+import com.example.imonitor_collect.device.VideoSetting;
+import com.example.imonitor_collect.net.thread.TransformDataThread;
+import com.example.imonitor_collect.service.RetrieveCommandService;
 
 /** A basic Camera preview class */
 public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback,Camera.PreviewCallback{
@@ -21,22 +23,36 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
     private SurfaceHolder mHolder;
     private Camera mCamera;
     private Parameters params;
-    private NetInfo netinfo;
     private VideoSetting videoSetting;
-    private int tempPreFrameNo = 0;
     
-    public CameraPreview(Context context, Camera camera) {
+    private Context mContext;
+    private int tempPreFrameNo = 0;
+    private boolean isStartTransform = false;
+	private int mFrameRate;
+	private long mFrameRateStartTime;
+	private int mHeight;
+	private int mWidth;
+	private int mCollectionId;
+	private int mAccountId;
+	private static Intent retriIntent;
+	private static TransformDataThread transformThread;
+    
+    public CameraPreview(Context context,VideoSetting videoSetting,Camera camera) {
         super(context);
+        mContext = context;
         mCamera = camera;
-
-        // Install a SurfaceHolder.Callback so we get notified when the
-        // underlying surface is created and destroyed.
+        this.videoSetting = videoSetting;
         mHolder = getHolder();
         mHolder.addCallback(this);
         // deprecated setting, but required on Android versions prior to 3.0
         mHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
+        runRetriService();
     }
-
+    public void reset(Camera c){
+    	mCamera = c;
+    	mHolder = getHolder();
+    	c.setPreviewCallback(this);
+    }
     public void surfaceCreated(SurfaceHolder holder) {
         // The Surface has been created, now tell the camera where to draw the preview.
         try {
@@ -45,10 +61,11 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
         } catch (IOException e) {
             Log.d(TAG, "Error setting camera preview: " + e.getMessage());
         }
+        runRetriService();
     }
 
     public void surfaceDestroyed(SurfaceHolder holder) {
-        // empty. Take care of releasing the Camera preview in your activity.
+        mHolder = null;
     }
 
     public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
@@ -64,7 +81,6 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
         try {
             mCamera.stopPreview();
         } catch (Exception e){
-          // ignore: tried to stop a non-existent preview
         }
 
         // set preview size and make any resize, rotate or
@@ -76,7 +92,7 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
         	mCamera.setPreviewDisplay(mHolder);
         	initCameraParams();
         	mCamera.startPreview();
-    		mCamera.cancelAutoFocus();// 2如果要实现连续的自动对焦，这一句必须加上
+    		mCamera.cancelAutoFocus();//鑷姩瀵圭劍
 
         } catch (Exception e){
             Log.d(TAG, "Error starting camera preview: " + e.getMessage());
@@ -84,47 +100,64 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
     }
     private void initCameraParams(){
 		params = mCamera.getParameters();
-		params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);//1连续对焦
+		params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);//1锟斤拷锟斤拷锟皆斤拷
 		mCamera.setParameters(params);
 	}
 
 	@Override
 	public void onPreviewFrame(byte[] data, Camera camera) {
 		// TODO Auto-generated method stub
-		if(!netinfo.isStartedSend())
-			return;
+//		if(!netinfo.isStartedSend())
+//			return;
 		if(tempPreFrameNo<videoSetting.getVideoPreRate()){
 			tempPreFrameNo++;
 			return;
 		}
 		tempPreFrameNo=0;		
-		try {
-		      if(data!=null)
-		      {
-		        YuvImage image = new YuvImage(data,
-        									videoSetting.getVideoFormatIndex(),
-        									videoSetting.getVideoWidth(),
-        									videoSetting.getVideoHeight(),
-        									null);
-		        if(image!=null)
-		        {
-		        	ByteArrayOutputStream outstream = new ByteArrayOutputStream();
-		      	  	//在此设置图片的尺寸和质量 
-		        	Camera.Size imageSize = mCamera.getParameters().getPreviewSize();
-		      	  	image.compressToJpeg(new Rect(0, 0,
-		      	  			(int)(videoSetting.getVideoWidthRatio()*imageSize.width), 
-		      	  			(int)(videoSetting.getVideoHeightRatio()*imageSize.height)),
-		      	  			videoSetting.getVideoQuality(), outstream);  
-		      	  	outstream.flush();
-		      	  	//启用线程将图像数据发送出去
-		      	  	//Thread th =ort) new MySendFileThread(outstream,pUsername,serverUrl,serverP;
-		      	  	//th.start();  
-		      	  	
-		        }
-		      }
-		  } catch (IOException e) {
-		      e.printStackTrace();
-		  }
+		if(data!=null)
+		{	
+			  mWidth = videoSetting.getVideoWidth();
+			  mHeight = videoSetting.getVideoHeight();
+			  int length = data.length;
+	
+			  if(mFrameRateStartTime == 0)
+			  {
+			      mFrameRateStartTime = System.currentTimeMillis();
+			  }
+			  mFrameRate ++;
+			  if(mFrameRate % 30 == 0){
+			      long rate = mFrameRate * 1000 / (System.currentTimeMillis() - mFrameRateStartTime);
+	                  Toast.makeText(mContext, "Frame Rate:" + rate, Toast.LENGTH_SHORT).show();
+			  }
+			  if(isStartTransform){
+//				  mWidth = camera.getParameters().getPreviewSize().width;
+//			  	mHeight = camera.getParameters().getPreviewSize().height;
+				  transformThread.setData(data,mWidth,mHeight);
+			  }
+		}
+		
 	}
-   
+
+	private void runRetriService() {
+		if(retriIntent==null){
+			Intent retriIntent = new Intent(); 
+			retriIntent.putExtra("CameraPreview", new Messenger(beginTransformHandler));
+			retriIntent.setClass(mContext, RetrieveCommandService.class);
+			mContext.startService(retriIntent); 
+		}
+	}
+	Handler beginTransformHandler = new Handler(){
+		@Override
+		public void handleMessage(android.os.Message msg) {
+			if(msg.what == 1){
+				isStartTransform = true;
+				mCollectionId = msg.arg1;
+				mAccountId = msg.arg2;
+				if(transformThread == null)
+					transformThread = new TransformDataThread(null,mCollectionId,mAccountId);
+				new Thread(transformThread).start();
+			}
+		};
+	};
+	
 }
