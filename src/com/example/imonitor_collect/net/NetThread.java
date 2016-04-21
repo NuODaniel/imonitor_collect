@@ -10,8 +10,9 @@ public abstract class NetThread implements Runnable{
 	public static final int MODIFY_INFO = 100004;
 	public static final int START_TRANSFORM_VIDEO = 100009;
 	public static final int TRANSFROM_DATA = 100010;
+	public static final int END_TRANSFORM_VIDEO = 100012;
 	
-	public static final String side = "COLLECITON";
+	public static final String side = "COLLECTION";
 	protected String message;
 	protected String mServerUrl = "192.168.253.1";
 	protected int mServerPort = 6789;

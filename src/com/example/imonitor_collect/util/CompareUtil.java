@@ -10,4 +10,13 @@ public class CompareUtil {
 		}
 		return true;
 	}
+	public static boolean IntsEqual(int[] b1,int[] b2){
+		if(b1.length!=b2.length)
+			return false;
+		for(int i=0;i<b1.length;i++){
+			if(b1[i]!=b2[i])
+				return false;
+		}
+		return true;
+	}
 }

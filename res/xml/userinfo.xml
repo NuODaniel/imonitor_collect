@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>  
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >   
+  <PreferenceCategory android:title="基础设置">
+     <Preference 
+        android:key="Cid"
+        android:title="cid"    
+		android:enabled="false"
+		android:summary="该采集端的唯一标示码"
+		android:defaultValue="no reg cid" />
+
+     <EditTextPreference
+		android:key="Devicename"
+		android:title="设备名"    
+		android:summary="该采集端的名称"
+		android:defaultValue="android4321"/>
+    <EditTextPreference
+		android:key="Username"
+	 	android:title="用户名"    
+	   	android:summary="用于连接服务器的用户名"
+		android:defaultValue="user363"/>
+    <EditTextPreference
+		android:key="Password"
+		android:title="密码"    
+		android:summary="用于连接服务器的用户密码"
+		android:defaultValue="123456"/>
+   
+   </PreferenceCategory>
+</PreferenceScreen>

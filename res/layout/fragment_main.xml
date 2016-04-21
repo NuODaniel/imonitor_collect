@@ -160,5 +160,5 @@
             android:gravity="center"
             android:text="编码方式：软件编码" />
     </LinearLayout>
-
+    
 </RelativeLayout>

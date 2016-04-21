@@ -1,58 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen
-  xmlns:android="http://schemas.android.com/apk/res/android">
- <PreferenceCategory android:title="设置">
-     <EditTextPreference
-   android:key="Cid"
-   android:title="cid"    
-   android:summary="该采集端的唯一标示码"
-   android:defaultValue="no reg cid"/>
-     <EditTextPreference
-   android:key="Devicename"
-   android:title="设备名"    
-   android:summary="该采集端的名称"
-   android:defaultValue="android4321"/>
-    <EditTextPreference
-   android:key="Username"
-   android:title="用户名"    
-   android:summary="用于连接服务器的用户名"
-   android:defaultValue="user363"/>
-    <EditTextPreference
-   android:key="Password"
-   android:title="密码"    
-   android:summary="用于连接服务器的用户密码"
-   android:defaultValue="123456"/>
-   <EditTextPreference
-   android:key="ServerUrl"
-   android:title="视频服务器地址"    
-   android:summary="保存服务器地址"
-   android:defaultValue="192.168.1.100"/>
-   </PreferenceCategory>
-<PreferenceCategory android:title="视频设置">
-	<EditTextPreference
-   android:key="VideoPreRate"
-   android:title="视频刷新间隔"    
-   android:summary="设置视频刷新的间隔值，应大于等于0，值越大视频传输间隔越长"
-   android:defaultValue="1"/>
-<EditTextPreference
-   android:key="VideoQuality"
-   android:title="图像质量"    
-   android:summary="设置图像压缩的质量，值为0~100，值越高越清晰，但同时数据也更大"
-   android:defaultValue="85"/>
-<EditTextPreference
-   android:key="VideoWidthRatio"
-   android:title="图像宽度缩放比例"    
-   android:summary="设置图像的宽度缩放比例，值为0~100，值越高图像分辨率越高"
-   android:defaultValue="100"/>
-   <EditTextPreference
-   android:key="VideoHeightRatio"
-   android:title="图像高度缩放比例"    
-   android:summary="设置图像的高度缩放比例，值为0~100，值越高图像分辨率越高"
-   android:defaultValue="100"/>
-   <EditTextPreference
-   android:key="Codeway"
-   android:title="编码方式"
-   android:summary="软件为0，硬件为1，硬件快，但是受平台限制，可能无法适用"
-   android:defaultValue="0"/>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+	<PreferenceCategory android:title="应用设置">
+		<EditTextPreference
+		   android:key="VideoPreRate"
+		   android:title="视频刷新间隔"    
+		   android:summary="设置视频刷新的间隔值，应大于等于0，值越大视频传输间隔越长"
+		   android:numeric="integer"
+		   android:defaultValue="3"
+		   />
+		<EditTextPreference
+		   android:key="VideoQuality"
+		   android:title="图像质量"    
+		   android:summary="设置图像压缩的质量，值为0~100，值越高越清晰，但同时数据也更大"
+		   android:numeric="integer"
+		   android:defaultValue="85"/>
+		<EditTextPreference
+		   android:key="VideoWidthRatio"
+		   android:title="图像宽度缩放比例"    
+		   android:summary="设置图像的宽度缩放比例，值为0~100，值越高图像分辨率越高"
+		   android:numeric="integer"
+		   android:defaultValue="100"/>
+	  	<EditTextPreference
+		   android:key="VideoHeightRatio"
+		   android:title="图像高度缩放比例"    
+		   android:summary="设置图像的高度缩放比例，值为0~100，值越高图像分辨率越高"
+		   android:numeric="integer"
+		   android:defaultValue="100"/>
+		<EditTextPreference
+		   android:key="Codeway"
+		   android:title="编码方式"
+		   android:summary="软件为0，硬件为1，硬件快，但是受平台限制，可能无法适用"
+		   android:numeric="integer"
+		   android:defaultValue="0"/>
     </PreferenceCategory>
 </PreferenceScreen>

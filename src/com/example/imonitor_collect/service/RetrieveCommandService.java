@@ -50,12 +50,20 @@ public class RetrieveCommandService extends IntentService {
 							int accountid = Integer.parseInt(args[1]);
 							
 							Bundle bundle = intent.getExtras();
-							Messenger messenger = (Messenger)bundle.get("MainActivity");
+							Messenger messenger = (Messenger)bundle.get("CameraPreview");
 							Message message = Message.obtain();
 							message.what = 1;
 							message.arg1 = collectionid;
 							message.arg2 = accountid;
 							messenger.send(message);
+						}else if(command == NetThread.END_TRANSFORM_VIDEO){
+//							Bundle bundle = intent.getExtras();
+//							Messenger messenger = (Messenger)bundle.get("CameraPreview");
+//							Message message = Message.obtain();
+//							message.what = 1;
+////							message.arg1 = collectionid;
+////							message.arg2 = accountid;
+//							messenger.send(message);
 						}
 					}
 				} catch (IOException e) {

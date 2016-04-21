@@ -1,7 +1,5 @@
 package com.example.imonitor_collect.main;
 
-import java.util.Iterator;
-import java.util.List;
 import java.util.UUID;
 
 import android.app.Activity;
@@ -12,8 +10,6 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
-import android.content.pm.ActivityInfo;
-import android.graphics.ImageFormat;
 import android.hardware.Camera;
 import android.hardware.Camera.Parameters;
 import android.os.Bundle;
@@ -45,11 +41,9 @@ import com.example.imonitor_collect.device.CollectionDevice;
 import com.example.imonitor_collect.device.VideoSetting;
 import com.example.imonitor_collect.dialog.QRCodeDialog;
 import com.example.imonitor_collect.net.NetThread;
-import com.example.imonitor_collect.net.thread.ConnectThread;
 import com.example.imonitor_collect.net.thread.DisconnectThread;
 import com.example.imonitor_collect.net.thread.RegisterThread;
 import com.example.imonitor_collect.service.CheckNetStateService;
-import com.example.imonitor_collect.service.RetrieveCommandService;
 import com.example.imonitor_collect.util.NetStateUtil;
 import com.example.imonitor_collect.util.QRCodeUtil;
 
@@ -134,7 +128,7 @@ public class MainActivity extends Activity {
     {
         mDrawerList = (ListView) findViewById(R.id.left_drawer);
 
-        mMenuTitles = getResources().getStringArray(R.array.planets_array);
+        mMenuTitles = getResources().getStringArray(R.array.setting_array);
 
         // Set the adapter for the list view
         mDrawerList.setAdapter(new ArrayAdapter<String>(this,
@@ -147,9 +141,10 @@ public class MainActivity extends Activity {
             public void onItemClick(AdapterView<?> parent, View view,
                     int position, long id)
             {
-                // Highlight the selected item, update the title, and close the
-                // drawer
-                mDrawerList.setItemChecked(position, true);
+            	mDrawerList.setItemChecked(position, true);
+            	Intent intent = new Intent(MainActivity.this,SettingActivity.class);
+            	intent.putExtra("setting", position);
+                startActivity(intent);
                 mDrawerLayout.closeDrawer(mDrawerList);
             }
         });
@@ -175,7 +170,7 @@ public class MainActivity extends Activity {
         private TextView txtCodeWay;
         private Button btnGenerateQR;
        
-        private Camera mCamera;
+       // private Camera mCamera;
         private RegisterThread registerThread;
         
         private String serverUrl = "192.168.253.1";
@@ -185,6 +180,7 @@ public class MainActivity extends Activity {
 		private VideoSetting videoSetting;
 		private NetStateUtil netUtil;
 		private SharedPreferences preParas = null;
+		private Camera mCamera;
 
 		private static Intent connectIntent = null;
 		private static int connectServiceState = 0;//0 closed 1 started
@@ -217,11 +213,8 @@ public class MainActivity extends Activity {
 			if(first)
 				registerDevice();
 			
-			mCamera = getCameraInstance();
-			initParams(mCamera);
-			
 			FrameLayout preview = (FrameLayout)rootView.findViewById(R.id.monitor_sv1);
-			mPreview = new CameraPreview(this.getActivity(), videoSetting, mCamera);
+			mPreview = new CameraPreview(this.getActivity(), videoSetting);
 			preview.addView(mPreview);
 			
 			txtUsername = (TextView)rootView.findViewById(R.id.text_username);
@@ -276,7 +269,6 @@ public class MainActivity extends Activity {
 			
 			runConnectService();
 		}
-		
 
 		/**
 		 * load cid,devicename,username,password
@@ -291,19 +283,19 @@ public class MainActivity extends Activity {
 		    	device.setPassword(preParas.getString("Password","123456"));
 		    	device.setCid(preferences.getString("Cid", "no registered cid"));
 		    	
-		    	videoSetting.setVideoPreRate(preParas.getInt("VideoPreRate", 10));
-		    	videoSetting.setVideoHeightRatio(preParas.getFloat("VideoHeightRatio", 100));
-		    	videoSetting.setVideoWidthRatio(preParas.getFloat("VideoWidthRatio", 100));
-		    	videoSetting.setCodeway(preParas.getInt("Codeway", 0));
+		    	videoSetting.setVideoPreRate(Integer.parseInt(preParas.getString("VideoPreRate", "15")));
+		    	videoSetting.setVideoHeightRatio(Integer.parseInt(preParas.getString("VideoHeightRatio", "100")));
+		    	videoSetting.setVideoWidthRatio(Integer.parseInt(preParas.getString("VideoWidthRatio", "100")));
+		    	videoSetting.setCodeway(Integer.parseInt(preParas.getString("Codeway", "0")));
 		    	
 		    	Editor editor = preParas.edit();
 		    	editor.putString("Devicename", device.getDeviceName());
 		    	editor.putString("Username", device.getUserName());
 		    	editor.putString("Password", device.getPassword());
-		    	editor.putInt("VideoPreRate", videoSetting.getVideoPreRate());
-		    	editor.putFloat("VideoHeightRatio", videoSetting.getVideoHeightRatio());
-		    	editor.putFloat("VideoWidthRatio", videoSetting.getVideoWidthRatio());
-		    	editor.putInt("Codeway", videoSetting.getCodeway());
+		    	editor.putString("VideoPreRate", ((Integer)videoSetting.getVideoPreRate()).toString());
+		    	editor.putString("VideoHeightRatio", ((Integer)videoSetting.getVideoHeightRatio()).toString());
+		    	editor.putString("VideoWidthRatio", ((Integer)videoSetting.getVideoWidthRatio()).toString());
+		    	editor.putString("Codeway", ((Integer)videoSetting.getCodeway()).toString());
 		    	editor.commit();
 		    }
 	    }
@@ -313,6 +305,7 @@ public class MainActivity extends Activity {
 		   if (preferences.getBoolean("firststart", true)) { 
 		    	Editor editor = preferences.edit();  
 				editor.putBoolean("firststart", false);  
+				editor.putString("Cid",getUUID());
 		    	editor.commit();
 		    	
 		    	Editor editor2 = preParas.edit();
@@ -382,21 +375,6 @@ public class MainActivity extends Activity {
 					txtLinkstate.setText("--未连接--");
 			}
 		};
-		@Override
-		public void onResume() {
-			// TODO Auto-generated method stub
-			super.onResume();
-			mCamera = getCameraInstance();
-			initParams(mCamera);
-			mPreview.reset(mCamera);
-		}
-
-		@Override
-		public void onPause() {
-			// TODO Auto-generated method stub
-			super.onPause();
-			kill_camera();
-		}
 
 		@Override
 		public void onDestroy() {
@@ -404,54 +382,9 @@ public class MainActivity extends Activity {
 			super.onDestroy();
 			this.getActivity().stopService(connectIntent);
 			connectServiceState = 0;
-			kill_camera();
 		}
 
-		public static Camera getCameraInstance(){
-		    Camera c = null;
-		    try {
-		        c = Camera.open(0); // attempt to get a Camera instance
-		    }
-		    catch (Exception e){
-		        // Camera is not available (in use or does not exist)
-		    }
-		    return c; // returns null if camera is unavailable
-		}
-		/**
-		 * initilize camera params
-		 * @param camera
-		 * @return
-		 */
-		private Parameters initParams(Camera camera){
-        	Parameters param=camera.getParameters();//��ȡ����
-            //get the best size of pictures
-        	//if not there will be dull color photos taken.
-        	//call getSupportedPreviewSizes()to get the support size list ,and get the biggest one
-            Camera.Size bestSize = null;
-            List<Camera.Size> sizeList = camera.getParameters().getSupportedPreviewSizes();
-            bestSize = sizeList.get(0);
-            for(int i = 1; i < sizeList.size(); i++){
-                if((sizeList.get(i).width * sizeList.get(i).height) > (bestSize.width * bestSize.height)){
-                    bestSize = sizeList.get(i);
-                }
-            }
-
-            List<Integer> supportedPreviewFormats = param.getSupportedPreviewFormats();
-            Iterator<Integer> supportedPreviewFormatsIterator = supportedPreviewFormats.iterator();
-            while(supportedPreviewFormatsIterator.hasNext()){
-                Integer previewFormat =supportedPreviewFormatsIterator.next();
-                if (previewFormat == ImageFormat.YV12) {
-                    param.setPreviewFormat(previewFormat);
-                }
-            }
-            param.setPreviewSize(bestSize.width, bestSize.height);
-
-            camera.setParameters(param);
-            param.setPreviewFrameRate(videoSetting.getVideoPreRate());
-            param.setJpegQuality(videoSetting.getVideoQuality());
-            
-			return param;
-        }
+		
 		/**
 		 * get the android device UUID
 		 * by computing with androidId, serialId, deviceId;
@@ -467,13 +400,6 @@ public class MainActivity extends Activity {
 			
 			return deviceUuid.toString();
 		}
-		private void kill_camera() {
-			if (mCamera != null) {
-				mCamera.setPreviewCallback(null);
-				mCamera.stopPreview();
-				mCamera.release();
-				mCamera = null;
-			}
-		}
+		
 	}
 }

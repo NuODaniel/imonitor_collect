@@ -3,12 +3,12 @@ package com.example.imonitor_collect.device;
 public class VideoSetting {
 	private int VideoPreRate;//帧率
 	private int VideoQuality=85;//视频质量
-    private float VideoWidthRatio=1;//发送视频宽度比例
-    private float VideoHeightRatio=1;//发送视频高度比例
+    private int VideoWidthRatio=1;//发送视频宽度比例
+    private int VideoHeightRatio=1;//发送视频高度比例
     private int VideoFormatIndex=0;//视频格式索引
-    private int VideoWidth=320;//发送视频宽度
-    private int VideoHeight=240;//发送视频高度
-    private int Codeway=1;//1硬件0软件
+    private int VideoWidth=640;//发送视频宽度
+    private int VideoHeight=480;//发送视频高度
+    private int Codeway=0;//1硬件0软件
     
 	public int getVideoPreRate() {
 		return VideoPreRate;
@@ -22,16 +22,16 @@ public class VideoSetting {
 	public void setVideoQuality(int videoQuality) {
 		VideoQuality = videoQuality;
 	}
-	public float getVideoWidthRatio() {
+	public int getVideoWidthRatio() {
 		return VideoWidthRatio;
 	}
-	public void setVideoWidthRatio(float videoWidthRatio) {
+	public void setVideoWidthRatio(int videoWidthRatio) {
 		VideoWidthRatio = videoWidthRatio;
 	}
-	public float getVideoHeightRatio() {
+	public int getVideoHeightRatio() {
 		return VideoHeightRatio;
 	}
-	public void setVideoHeightRatio(float videoHeightRatio) {
+	public void setVideoHeightRatio(int videoHeightRatio) {
 		VideoHeightRatio = videoHeightRatio;
 	}
 	public int getVideoFormatIndex() {
