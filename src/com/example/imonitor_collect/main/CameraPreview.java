@@ -52,7 +52,9 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
     public void surfaceCreated(SurfaceHolder holder) {
         // The Surface has been created, now tell the camera where to draw the preview.
         try {
+        	
         	mCamera = Camera.open();
+        	initCameraParams();
         	mCamera.setPreviewCallback(this);
             mCamera.setPreviewDisplay(holder);
             mCamera.startPreview();
@@ -89,8 +91,9 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
         	
         	mCamera.setPreviewCallback(this);
             mCamera.setPreviewDisplay(mHolder);
+            initCameraParams();
             mCamera.startPreview();
-    		mCamera.cancelAutoFocus();//自动对焦
+            mCamera.cancelAutoFocus();//自动对焦
 
         } catch (Exception e){
             Log.d(TAG, "Error starting camera preview: " + e.getMessage());
@@ -98,6 +101,7 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
     }
     private void initCameraParams(){
 		params = mCamera.getParameters();
+		params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);//1�����Խ�
 		params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);//1�����Խ�
 		mCamera.setParameters(params);
 	}
